@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Midas Parser Demo Page</title>
+        <title>MooKeys Demo Page</title>
         <script type="text/javascript" src="mootools-core-1.3-full-nocompat.js"></script>
         <script type="text/javascript" src="../Source/MooKeys.js"></script>
     </head>
@@ -8,6 +8,12 @@
         <script>
             MooKeys.on();
             MooKeys.register(new MooCreditSwipe());
+            MooKeys.register(new MooKeyPattern('meta+option+l', function(){
+                document.id('output').innerHTML += 'Show downloads!<br/>';
+            }));
+            MooKeys.register(new MooKeyPattern('meta+s', function(){
+                document.id('output').innerHTML += 'Save!<br/>';
+            }));
             document.addEvent('cardSwipe', function(event){
                 alert(event.swipe.account+"\nexpiration: "+event.swipe.exp_month+'/'+event.swipe.exp_year+"\n"+event.swipe.name);
             });

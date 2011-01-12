@@ -1,6 +1,7 @@
 var MooKeys = {
     registry :[],
     interval : 1000,
+    active : null,
     register : function(keysequence){
         this.registry.push(keysequence);
     },
@@ -39,21 +40,139 @@ var MooKeys = {
         var str = MooKeys.keyStack.join('');
         var subs;
         MooKeys.registry.each(function(sequence){
-            subs = sequence.containedIn(str);
-            if(subs && subs.length){
-                if(MooKeys.results[sequence.id]) MooKeys.results[sequence.id].combine(subs);
-                else MooKeys.results[sequence.id] = subs;
-                MooKeys.report.delay(400, this, [sequence.id, sequence.processResults]);
-                MooKeys.eventStack.empty();
-                MooKeys.dateStack.empty();
-                MooKeys.keyStack.empty();
+            if(sequence.containedIn){
+                subs = sequence.containedIn(str);
+                if(subs && subs.length){ //scan for a sequence
+                    if(MooKeys.results[sequence.id]) MooKeys.results[sequence.id].combine(subs);
+                    else MooKeys.results[sequence.id] = subs;
+                    MooKeys.report.delay(400, this, [sequence.id, sequence.processResults]);
+                    MooKeys.eventStack.empty();
+                    MooKeys.dateStack.empty();
+                    MooKeys.keyStack.empty();
+                }
+            }
+            if(sequence.wasPressed){
+                if(sequence.wasPressed(keyEvent)){
+                    if(sequence.callback) sequence.callback(keyEvent);
+                }
             }
         });
     },
     on : function(){
-        document.addEvent('keypress', MooKeys.keypress);
+        if(this.active == null){
+            document.addEvent('keypress', MooKeys.keypress);
+            this.active = true;
+        }else{
+            this.active = true;
+        }
+    },
+    off : function(){
+        this.active = false;
     }
 };
+
+var MooKeyPattern = new Class({
+    pattern : null,
+    callback : null,
+    id : null,
+    shift_nums : { "`":"~", "1":"!", "2":"@", "3":"#", "4":"$", "5":"%", "6":"^", "7":"&", "8":"*", "9":"(", "0":")", "-":"_", "=":"+", ";":":", "'":"\"", ",":"<", ".":">", "/":"?", "\\":"|" },
+    special_keys : { 'esc':27, 'escape':27, 'tab':9, 'space':32, 'return':13, 'enter':13, 'backspace':8, 'scrolllock':145, 'scroll_lock':145, 'scroll':145, 'capslock':20, 'caps_lock':20, 'caps':20, 'numlock':144, 'num_lock':144, 'num':144,  'pause':19, 'break':19,  'insert':45, 'home':36, 'delete':46, 'end':35, 'pageup':33, 'page_up':33, 'pu':33, 'pagedown':34, 'page_down':34, 'pd':34, 'left':37, 'up':38, 'right':39, 'down':40, 'f1':112, 'f2':113, 'f3':114, 'f4':115, 'f5':116, 'f6':117, 'f7':118, 'f8':119, 'f9':120, 'f10':121, 'f11':122, 'f12':123 },
+    initialize : function(pattern, callback){
+        this.pattern = pattern;
+        this.id = this.uuid();
+        this.callback = callback;
+        var default_options = {
+			'type':'keydown',
+			'propagate':false,
+			'disable_in_input':false,
+			'target':document,
+			'keycode':false
+		}
+		if(!this.opt) this.opt = default_options;
+		else {
+			for(var dfo in default_options) {
+				if(typeof this.opt[dfo] == 'undefined') this.opt[dfo] = default_options[dfo];
+			}
+		}
+    },
+    wasPressed : function(event){
+        // this code is long descendent from http://www.openjs.com/scripts/events/keyboard_shortcuts/
+        // but you can still note the overlap
+        var modifiers = {
+            shift: { wanted:false, pressed:false},
+            ctrl : { wanted:false, pressed:false},
+            alt  : { wanted:false, pressed:false},
+            meta : { wanted:false, pressed:false}	//Meta is Mac specific
+        };
+        var character = String.fromCharCode(event.code);
+        if(event.code == 188) character = ",";
+        if(event.code == 190) character = ".";
+        if(event.control) modifiers.ctrl.pressed = true;
+        if(event.shift) modifiers.shift.pressed = true;
+        if(event.alt) modifiers.alt.pressed = true;
+        if(event.meta) modifiers.meta.pressed = true;
+        var keys = this.pattern.split("+");
+        var kp = 0;
+        for(var i=0; k=keys[i],i<keys.length; i++) {
+            switch(k){
+                case 'ctrl':
+                case 'control':
+                    modifiers.ctrl.wanted = true;
+                    break;
+                case 'shift':
+                    modifiers.shift.wanted = true;
+                    break;
+                case 'alt':
+                case 'opt':
+                case 'option':
+                    modifiers.alt.wanted = true;
+                    break;
+                case 'meta':
+                case 'apple':
+                case 'command':
+                case '◆':
+                case '⌘':
+                case '':
+                    modifiers.meta.wanted = true;
+                    break;
+                default:
+                    if(this.opt['keycode']){
+                        if(this.opt['keycode'] == code) kp--;
+                    }else{
+                        if(this.shift_nums[character] && event.shift) { //Still allow 'shift+[int]'
+                            character = this.shift_nums[character];
+                            if(character != k) kp--;
+                        }
+                    }
+            }
+            kp++;
+        }
+        if(
+            kp == keys.length &&
+            modifiers.ctrl.pressed == modifiers.ctrl.wanted &&
+            modifiers.shift.pressed == modifiers.shift.wanted &&
+            modifiers.alt.pressed == modifiers.alt.wanted &&
+            modifiers.meta.pressed == modifiers.meta.wanted
+        ){
+            this.callback(event);
+            if(!this.opt['propagate']) { //Stop the event
+                event.stopPropagation();
+                return false;
+            }
+        }
+    },
+    processResults : function(results){
+        return results;
+    },
+    uuid : function(){
+        var s = [];
+        var hexDigits = "0123456789ABCDEF";
+        for (var i = 0; i < 32; i++)  s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+        s[12] = "4";
+        s[16] = hexDigits.substr((s[16] & 0x3) | 0x8, 1);
+        return s.join("");
+    }
+});
 
 var MooKeySequence = new Class({
     pattern : null,
