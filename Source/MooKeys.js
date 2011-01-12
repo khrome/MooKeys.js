@@ -6,7 +6,7 @@ var MooKeys = {
         this.registry.push(keysequence);
     },
     results : {},
-    report : function(id, parseFunc){
+    report : function(id, parseFunc, callback){
         if(MooKeys.results[id] && MooKeys.results[id].length > 0){
             var res = parseFunc(MooKeys.results[id].clone());
             var evnt;
@@ -22,6 +22,7 @@ var MooKeys = {
             evnt.swipe = res;
             MooKeys.results[id].empty();
             document.fireEvent('cardSwipe', [evnt]);
+            if(callback) callback(evnt);
         }
     },
     dateStack : [],
@@ -45,7 +46,7 @@ var MooKeys = {
                 if(subs && subs.length){ //scan for a sequence
                     if(MooKeys.results[sequence.id]) MooKeys.results[sequence.id].combine(subs);
                     else MooKeys.results[sequence.id] = subs;
-                    MooKeys.report.delay(400, this, [sequence.id, sequence.processResults]);
+                    MooKeys.report.delay(400, this, [sequence.id, sequence.processResults, sequence.callback]);
                     MooKeys.eventStack.empty();
                     MooKeys.dateStack.empty();
                     MooKeys.keyStack.empty();
