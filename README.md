@@ -8,6 +8,8 @@ How to use
 
 To use a magnetic swipe, you just need to attach a listener to the document:
 
+    MooKeys.on();
+    MooKeys.register(new MooCreditSwipe());
     document.addEvent('cardSwipe', function(event){
         // manipulate event.swipe here
     });

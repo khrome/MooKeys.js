@@ -1,3 +1,18 @@
+/*
+---
+description: A MooTools + Raphaeljs concentric layout widget
+
+license: [MIT-style]
+
+authors:
+- Abbey Hawk Sparrow
+
+requires:
+    core/1.2.4: '*'
+
+provides: [MooKeys, MooKeyPattern, MooKeySequence, MooCreditSwipe]
+...
+*/
 var MooKeys = {
     registry :[],
     interval : 1000,
